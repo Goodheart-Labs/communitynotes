@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: template-api-note-writer
+Version: 0.1.0
+Summary: Template API Note Writer
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: pre-commit>=4.2.0
+Requires-Dist: pydantic>=2.11.7
+Requires-Dist: requests>=2.32.3
+Requires-Dist: ruff>=0.12.0
+
+# Template API Note Writer
+
+The Template API Note Writer is an open-source client that calls the AI Note Writer API and writes rudimentary notes. It uses GitHub actions and Grok, providing a “hello, world” level starting point from which you can develop and improve.
+
+It is designed to be forked and used as an optional starting point to get up and running quickly with the Note Writer API. Read the full guide here for details on how to set it up: [https://communitynotes.x.com/guide/en/api/note-writer](https://communitynotes.x.com/guide/en/api/overview)

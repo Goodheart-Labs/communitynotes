@@ -10,3 +10,4 @@ __pycache__
 .vscode*
 communitynotes_env
 public_venv
+claude.md

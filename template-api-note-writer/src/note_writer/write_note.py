@@ -1,3 +1,4 @@
+import os
 from data_models import NoteResult, Post, ProposedMisleadingNote
 from note_writer.llm_util import (
     get_grok_live_search_response,
@@ -5,6 +6,7 @@ from note_writer.llm_util import (
     grok_describe_image,
 )
 from note_writer.misleading_tags import get_misleading_tags
+from note_writer.enhanced_research import enhanced_research_and_write_note
 
 
 def _get_prompt_for_note_writing(post: Post, images_summary: str, search_results: str):
@@ -98,12 +100,29 @@ def _summarize_images(post: Post) -> str:
 
 def research_post_and_write_note(
     post: Post,
+    research_mode: str = None
 ) -> NoteResult:
+    """
+    Research a post and potentially write a Community Note.
+    
+    Args:
+        post: The post to analyze
+        research_mode: Either "grok" (default) or "enhanced" for the new pipeline
+    """
+    # Determine research mode from environment if not specified
+    if research_mode is None:
+        research_mode = os.getenv("RESEARCH_MODE", "grok").lower()
+    
     try:
         images_summary = _summarize_images(post)
     except ValueError as e:
         return NoteResult(post=post, error=str(e))
-
+    
+    # Use enhanced research mode if specified
+    if research_mode == "enhanced":
+        return enhanced_research_and_write_note(post, images_summary)
+    
+    # Otherwise use original Grok-based approach
     search_prompt = _get_prompt_for_live_search(post, images_summary)
     search_results = get_grok_live_search_response(search_prompt)
     note_prompt = _get_prompt_for_note_writing(post, images_summary, search_results)

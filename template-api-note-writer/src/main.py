@@ -12,12 +12,13 @@ from note_writer.write_note import research_post_and_write_note
 def _worker(
     post: Post,
     dry_run: bool = False,
+    research_mode: str = None,
 ):
     """
     Fetch and try to write and submit a note for one post.
     If `dry_run` is True, do not submit notes to the API, just print them to the console.
     """
-    note_result: NoteResult = research_post_and_write_note(post)
+    note_result: NoteResult = research_post_and_write_note(post, research_mode=research_mode)
 
     log_strings: List[str] = ["-" * 20, f"Post: {post.post_id}", "-" * 20]
     if note_result.post is not None:
@@ -53,6 +54,7 @@ def main(
     num_posts: int = 10,
     dry_run: bool = False,
     concurrency: int = 1,
+    research_mode: str = None,
 ):
     """
     Get up to `num_posts` recent posts eligible for notes and write notes for them.
@@ -60,6 +62,7 @@ def main(
     """
 
     print(f"Getting up to {num_posts} recent posts eligible for notes")
+    print(f"Research mode: {research_mode or 'default (from env or grok)'}")
     eligible_posts: List[Post] = get_posts_eligible_for_notes(max_results=num_posts)
     print(f"Found {len(eligible_posts)} recent posts eligible for notes")
     print(
@@ -72,13 +75,13 @@ def main(
     if concurrency > 1:
         with ThreadPoolExecutor(max_workers=concurrency) as executor:
             futures = [
-                executor.submit(_worker, post, dry_run) for post in eligible_posts
+                executor.submit(_worker, post, dry_run, research_mode) for post in eligible_posts
             ]
             for future in futures:
                 future.result()
     else:
         for post in eligible_posts:
-            _worker(post, dry_run)
+            _worker(post, dry_run, research_mode)
     print("Done.")
 
 
@@ -99,9 +102,17 @@ if __name__ == "__main__":
         default=1,
         help="Number of concurrent tasks to run",
     )
+    parser.add_argument(
+        "--research-mode",
+        type=str,
+        choices=["grok", "enhanced"],
+        default=None,
+        help="Research mode to use: 'grok' (default) or 'enhanced' (OpenRouter with Perplexity/Claude)",
+    )
     args = parser.parse_args()
     main(
         num_posts=args.num_posts,
         dry_run=args.dry_run,
         concurrency=args.concurrency,
+        research_mode=args.research_mode,
     )

@@ -50,3 +50,30 @@ class NoteResult(BaseModel):
     error: Optional[str] = None
     post: Optional[Post] = None
     images_summary: Optional[str] = None
+
+
+class ContextPoint(BaseModel):
+    """Represents a piece of missing context from a post"""
+    description: str
+    importance: int  # 1-5, where 5 is most important
+    source_required: bool = True
+
+
+class TrustedSource(BaseModel):
+    """Represents a source with trustworthiness evaluation"""
+    url: str
+    trust_score: int  # 0-100
+    trust_reason: str
+    relevant_content: Optional[str] = None
+    addresses_context: bool = False
+
+
+class ResearchResult(BaseModel):
+    """Results from the enhanced research pipeline"""
+    post_id: str
+    search_query: str
+    search_results: str
+    missing_context_points: List[ContextPoint]
+    sources: List[TrustedSource]
+    primary_source: Optional[TrustedSource] = None
+    note_text: Optional[str] = None
