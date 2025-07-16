@@ -76,7 +76,7 @@ export class OpenRouterClient {
       messages: [
         {
           role: 'system',
-          content: 'You are a research assistant. Search the web for information and always include specific URLs for your sources directly in the text.'
+          content: 'You are an context and factchecking tool. Search the web for information relating to the following query and always include specific URLs for your sources directly in the text.'
         },
         {
           role: 'user',
@@ -107,11 +107,16 @@ export class OpenRouterClient {
   async identifyMissingContext(postText: string, imagesSummary: string, searchResults: string): Promise<string> {
     const prompt = `Given this X post and search results about it, identify the most important pieces of context that are missing from the post that would help readers understand the full picture.
 
-Focus only on factual context that materially changes the interpretation of the post. Do not flag opinions, predictions, or minor details.
+Focus only on factual context that materially and significantly changes the interpretation of the post. Do not flag opinions, predictions, or minor details.
 
 If no important context is missing, respond with exactly: "NO MISSING CONTEXT"
 
-If important context is missing, list the 1-3 most critical missing pieces in order of importance. Be specific and concise.
+If important context is missing, list the 1-3 most critical missing pieces in order of importance. Be specific and concise. Avoid technicalities, these should be significant errors. With each claim, write all the urls or sources that relate to that claim, in the format:
+
+1. [Claim]
+Sources:
+- Source
+- Source
 
 Post text:
 \`\`\`
@@ -143,8 +148,8 @@ Consider:
 
 For each source, provide:
 1. The URL
-2. Trust score (0-100)
-3. Brief reason for the score
+2. Brief reason for the score
+3. Trust score (0-100)
 
 Rank them from most to least trusted.
 
