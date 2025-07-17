@@ -6,7 +6,7 @@ import { XAPIClient } from './lib/x-api-client';
 import { NoteWriterService } from './services/note-writer';
 import { globalLogCollector } from './lib/log-collector';
 import { generateHTMLReport } from './services/html-generator';
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, mkdirSync, fstat } from 'fs';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -111,6 +111,7 @@ async function main() {
     // Fetch eligible posts
     console.log(`\n📊 Fetching eligible posts...`);
     const posts = await xClient.getEligiblePosts(config.max_posts);
+    
     
     if (posts.length === 0) {
       console.log(`\n😴 No eligible posts found.`);
