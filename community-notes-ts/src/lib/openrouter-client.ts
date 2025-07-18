@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Config } from '../types';
-import { globalLogCollector } from './log-collector';
+import { LogCollector, globalLogCollector } from './log-collector';
 
 interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant';
@@ -17,12 +17,15 @@ interface OpenRouterRequest {
 export class OpenRouterClient {
   private apiKey: string;
   private baseURL = 'https://openrouter.ai/api/v1/chat/completions';
+  private logCollector: LogCollector;
   
-  constructor(config: Config) {
+  constructor(config: Config, logCollector?: LogCollector) {
     this.apiKey = config.openrouter_api_key;
+    this.logCollector = logCollector || globalLogCollector;
   }
 
   private async makeRequest(payload: OpenRouterRequest): Promise<string> {
+    console.log(`🔄 Making OpenRouter request to model: ${payload.model}`);
     const startTime = Date.now();
     const apiCall = {
       timestamp: new Date().toISOString(),
@@ -50,21 +53,24 @@ export class OpenRouterClient {
       apiCall.responseBody = response.data;
       apiCall.duration = Date.now() - startTime;
       
-      globalLogCollector.addAPICall(apiCall);
-
-      return response.data.choices[0].message.content;
+      this.logCollector.addAPICall(apiCall);
+      
+      const content = response.data.choices[0].message.content;
+      console.log(`✅ OpenRouter response received (${apiCall.duration}ms)`);
+      return content;
     } catch (error) {
       apiCall.duration = Date.now() - startTime;
       
       if (axios.isAxiosError(error)) {
         apiCall.responseStatus = error.response?.status || 0;
         apiCall.error = `${error.response?.status} ${error.response?.data?.error?.message || error.message}`;
-        globalLogCollector.addAPICall(apiCall);
+        this.logCollector.addAPICall(apiCall);
+        console.error(`❌ OpenRouter API error: ${apiCall.error}`);
         throw new Error(`OpenRouter API error: ${apiCall.error}`);
       }
       
       apiCall.error = error instanceof Error ? error.message : String(error);
-      globalLogCollector.addAPICall(apiCall);
+      this.logCollector.addAPICall(apiCall);
       throw error;
     }
   }
@@ -109,16 +115,17 @@ export class OpenRouterClient {
 
 Focus only on factual context that materially and significantly changes the interpretation of the post. Do not flag opinions, predictions, or minor details.
 
-If no important context is missing, respond with exactly: "NO MISSING CONTEXT"
+Please start by responding with one of the following statuses "TWEET NOT SIGNIFICANTLY INCORRECT" "NO MISSING CONTEXT" "CORRECTION WITH TRUSTWORTHY CITATION" "CORRECTION WITHOUT TRUSTWORTHY CITATION"
 
-If important context is missing, list the the most critical missing pieces in order of importance. Be specific and concise. Avoid technicalities, these should be significant errors. With each claim, write all the urls or sources that relate to that claim, in the format. In rare cases, list multiple claims if there are several of equal importance:
+If important context is missing, write a community note to correct the claim. Always include a URL, if no url is possible respond with the relevant status. After the status, no more than 500 characters, including the URL
 
-[Claim]
-Sources:
-- Source URL
-- Source URL
+[Status]
 
-Post text:
+[Short correction of most significant error]
+
+[URL of most trustworthy source]
+
+Post perhaps in need of community note:
 \`\`\`
 ${postText}
 \`\`\`
@@ -128,39 +135,12 @@ Images in post:
 ${imagesSummary || 'No images'}
 \`\`\`
 
-Search results:
+Perpelexity search results (please use citations in these to correct post):
 \`\`\`
 ${searchResults}
 \`\`\``;
 
     return this.claudeAnalyze(prompt, 0.0, true);  // Use Sonnet 4 for missing context
-  }
-
-  async evaluateSourceTrustworthiness(sourcesText: string): Promise<string> {
-    const prompt = `  how likely they are to be trusted by a broad, politically diverse audience.
-
-Consider:
-- Domain reputation and credibility
-- Primary vs secondary sources  
-- Institutional vs partisan sources
-- Track record for accuracy
-- Cross-partisan acceptance
-
-For each source, provide:
-1. The URL
-2. Brief reason for the score
-3. Trust score (0-100)
-
-Rank them from most to least trusted.
-
-Sources to evaluate:
-\`\`\`
-${sourcesText}
-\`\`\`
-
-Format your response as a numbered list with each entry containing the URL, score, and reason.`;
-
-    return this.claudeAnalyze(prompt, 0.0, true);  // Use Sonnet 4 for source evaluation
   }
 
   async findContextInSource(sourceContent: string, sourceUrl: string, missingContext: string): Promise<string> {
@@ -179,8 +159,8 @@ ${sourceContent.substring(0, 30000)} // Limit to avoid token issues
 \`\`\`
 
 Analyze the source carefully and respond with ONLY:
-- "YES" if the source contains relevant information that addresses the missing context
-- "NO" if the source does not contain relevant information about the missing context
+- "YES" if the source justifies the claim, such that a person could read it and agree with the correction
+- "NO" if the source is not very clear on the claim given, in any way.
 
 Do not provide any other text, quotes, or explanations. Just respond with YES or NO.`;
 

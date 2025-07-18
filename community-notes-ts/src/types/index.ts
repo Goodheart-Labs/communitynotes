@@ -39,7 +39,7 @@ export enum MisleadingTag {
 // Note schemas
 export const ProposedNoteSchema = z.object({
   post_id: z.string(),
-  note_text: z.string().max(280),
+  note_text: z.string().max(500),
   trustworthy_sources: z.boolean().default(true)
 });
 

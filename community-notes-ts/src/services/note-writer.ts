@@ -1,13 +1,12 @@
 import { Post, NoteResult, Media, Config } from '../types';
 import { EnhancedResearchService } from './enhanced-research';
+import { LogCollector } from '../lib/log-collector';
 
 export class NoteWriterService {
   private enhancedResearch: EnhancedResearchService;
-  private config: Config;
 
-  constructor(config: Config) {
-    this.config = config;
-    this.enhancedResearch = new EnhancedResearchService(config);
+  constructor(config: Config, logCollector?: LogCollector) {
+    this.enhancedResearch = new EnhancedResearchService(config, logCollector);
   }
 
   async writeNoteForPost(post: Post): Promise<NoteResult> {

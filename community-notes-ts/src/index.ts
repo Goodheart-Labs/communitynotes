@@ -6,7 +6,8 @@ import { XAPIClient } from './lib/x-api-client';
 import { NoteWriterService } from './services/note-writer';
 import { globalLogCollector } from './lib/log-collector';
 import { generateHTMLReport } from './services/html-generator';
-import { writeFileSync, mkdirSync, fstat } from 'fs';
+import { generateBatchHTMLReport } from './services/batch-html-generator';
+import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -25,11 +26,11 @@ const { values } = parseArgs({
     },
     'max-posts': {
       type: 'string',
-      default: '10',
+      default: '5',
     },
     'concurrency': {
       type: 'string',
-      default: '1',
+      default: '5',
     },
     'research-mode': {
       type: 'string',
@@ -38,12 +39,14 @@ const { values } = parseArgs({
   },
 });
 
+import { LogCollector } from './lib/log-collector';
+
 async function processPost(
   post: Post, 
-  noteWriter: NoteWriterService, 
   xClient: XAPIClient, 
-  config: Config
-): Promise<{ post: Post; result: NoteResult }> {
+  config: Config,
+  logCollector: LogCollector
+): Promise<{ post: Post; result: NoteResult; logCollector: LogCollector }> {
   console.log(`\n${'='.repeat(50)}`);
   console.log(`Processing Post: ${post.id}`);
   console.log(`${'='.repeat(50)}`);
@@ -52,10 +55,14 @@ async function processPost(
   if (post.media.length > 0) {
     console.log(`\nMedia: ${post.media.length} item(s)`);
   }
-
-  // Start collecting logs
-  globalLogCollector.startCollecting();
   
+  console.log(`\n⏱️  Note: Processing usually takes about 3 minutes per post...`);
+
+  // Start collecting logs for this specific post
+  logCollector.startCollecting();
+  
+  // Create a NoteWriterService with this post's log collector
+  const noteWriter = new NoteWriterService(config, logCollector);
   const result: NoteResult = await noteWriter.writeNoteForPost(post);
 
   if (result.error) {
@@ -79,7 +86,7 @@ async function processPost(
     }
   }
   
-  return { post, result };
+  return { post, result, logCollector };
 }
 
 async function main() {
@@ -106,34 +113,47 @@ async function main() {
 
     // Initialize clients
     const xClient = new XAPIClient(config);
-    const noteWriter = new NoteWriterService(config);
 
     // Fetch eligible posts
     console.log(`\n📊 Fetching eligible posts...`);
-    const posts = await xClient.getEligiblePosts(config.max_posts);
+    const allPosts = await xClient.getEligiblePosts(100); // Fetch top 100
     
-    
-    if (posts.length === 0) {
+    if (allPosts.length === 0) {
       console.log(`\n😴 No eligible posts found.`);
       return;
     }
 
-    console.log(`\n📋 Found ${posts.length} eligible posts`);
-    console.log(`   IDs: ${posts.map(p => p.id).join(', ')}`);
+    console.log(`\n📋 Found ${allPosts.length} eligible posts`);
+    
+    // Randomly select posts based on max_posts config
+    const posts: Post[] = [];
+    const availablePosts = [...allPosts];
+    const numToSelect = Math.min(config.max_posts, availablePosts.length);
+    
+    for (let i = 0; i < numToSelect; i++) {
+      const randomIndex = Math.floor(Math.random() * availablePosts.length);
+      posts.push(availablePosts[randomIndex]);
+      availablePosts.splice(randomIndex, 1); // Remove selected post to avoid duplicates
+    }
+    
+    console.log(`\n🎲 Randomly selected ${posts.length} post(s) from top ${allPosts.length}`);
+    console.log(`   Selected IDs: ${posts.map(p => p.id).join(', ')}`);
 
     // Process posts and collect results
-    const results: { post: Post; result: NoteResult }[] = [];
+    const results: { post: Post; result: NoteResult; logCollector: LogCollector }[] = [];
     
     if (config.concurrency > 1) {
-      // Process in parallel
-      const promises = posts.map(post => 
-        processPost(post, noteWriter, xClient, config)
-      );
+      // Process in parallel - each with its own log collector
+      const promises = posts.map(post => {
+        const postLogCollector = new LogCollector();
+        return processPost(post, xClient, config, postLogCollector);
+      });
       results.push(...await Promise.all(promises));
     } else {
-      // Process sequentially
+      // Process sequentially - each with its own log collector
       for (const post of posts) {
-        const result = await processPost(post, noteWriter, xClient, config);
+        const postLogCollector = new LogCollector();
+        const result = await processPost(post, xClient, config, postLogCollector);
         results.push(result);
       }
     }
@@ -142,16 +162,49 @@ async function main() {
     const reportsDir = join(process.cwd(), 'local_reports');
     mkdirSync(reportsDir, { recursive: true });
     
-    for (const { post, result } of results) {
-      const html = generateHTMLReport(post, result, globalLogCollector);
+    // Store individual report paths for batch report
+    const batchData: Array<{post: Post; result: NoteResult; logs: string[]; htmlReport: string}> = [];
+    
+    for (const { post, result, logCollector } of results) {
+      const html = generateHTMLReport(post, result, logCollector);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `note_${timestamp}_${post.id}.html`;
       const filepath = join(reportsDir, filename);
       
       writeFileSync(filepath, html, 'utf-8');
-      console.log(`\n📄 HTML report saved: ${filepath}`);
       
-      // Open in browser (only works on CLI, not in API mode)
+      // Store for batch report
+      batchData.push({
+        post,
+        result,
+        logs: logCollector.getLogs().map(log => log.message),
+        htmlReport: filename // Just the filename, not full path
+      });
+    }
+    
+    // Generate batch report if multiple posts
+    if (results.length > 1) {
+      const batchHtml = generateBatchHTMLReport(batchData);
+      const batchTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const batchFilename = `batch_${batchTimestamp}_${results.length}posts.html`;
+      const batchFilepath = join(reportsDir, batchFilename);
+      
+      writeFileSync(batchFilepath, batchHtml, 'utf-8');
+      console.log(`\n📊 Batch report saved: ${batchFilepath}`);
+      
+      // Open batch report in browser
+      try {
+        const openCommand = process.platform === 'darwin' ? 'open' : 
+                          process.platform === 'win32' ? 'start' : 'xdg-open';
+        await execAsync(`${openCommand} "${batchFilepath}"`);
+        console.log(`🌐 Opened batch report in browser`);
+      } catch (error) {
+        console.log(`ℹ️  Could not open browser automatically`);
+      }
+    } else if (results.length === 1) {
+      // For single post, open individual report
+      const filepath = join(reportsDir, batchData[0].htmlReport);
+      console.log(`\n📄 HTML report saved: ${filepath}`);
       try {
         const openCommand = process.platform === 'darwin' ? 'open' : 
                           process.platform === 'win32' ? 'start' : 'xdg-open';
@@ -160,9 +213,6 @@ async function main() {
       } catch (error) {
         console.log(`ℹ️  Could not open browser automatically`);
       }
-      
-      // Clear logs for next post
-      globalLogCollector.clear();
     }
 
     console.log(`\n✅ Done processing ${posts.length} posts!`);
