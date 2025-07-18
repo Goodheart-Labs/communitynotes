@@ -1,0 +1,219 @@
+{
+  "sources": {
+    "reuters.com": {
+      "score": 95,
+      "reason": "International news agency with strong reputation for accuracy and minimal bias",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "apnews.com": {
+      "score": 93,
+      "reason": "Associated Press - primary source news agency with high journalistic standards",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "bbc.com": {
+      "score": 90,
+      "reason": "BBC News - public service broadcaster with strong fact-checking",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "bbc.co.uk": {
+      "score": 90,
+      "reason": "BBC News UK domain - public service broadcaster",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "npr.org": {
+      "score": 88,
+      "reason": "National Public Radio - non-profit media with strong journalistic standards",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "wsj.com": {
+      "score": 85,
+      "reason": "Wall Street Journal - respected financial newspaper with rigorous reporting",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "ft.com": {
+      "score": 85,
+      "reason": "Financial Times - international business newspaper with strong credibility",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "theguardian.com": {
+      "score": 82,
+      "reason": "The Guardian - established newspaper with transparent corrections policy",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "nytimes.com": {
+      "score": 82,
+      "reason": "New York Times - major newspaper with extensive fact-checking resources",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "washingtonpost.com": {
+      "score": 80,
+      "reason": "Washington Post - major US newspaper with investigative journalism focus",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "economist.com": {
+      "score": 80,
+      "reason": "The Economist - analytical publication with data-driven reporting",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "nature.com": {
+      "score": 95,
+      "reason": "Nature - premier peer-reviewed scientific journal",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "science.org": {
+      "score": 95,
+      "reason": "Science - leading peer-reviewed scientific journal",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "scientificamerican.com": {
+      "score": 88,
+      "reason": "Scientific American - reputable science journalism publication",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "pubmed.ncbi.nlm.nih.gov": {
+      "score": 95,
+      "reason": "PubMed - database of peer-reviewed medical literature",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "cdc.gov": {
+      "score": 92,
+      "reason": "CDC - official US health agency with scientific data",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "who.int": {
+      "score": 90,
+      "reason": "World Health Organization - international health authority",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "snopes.com": {
+      "score": 85,
+      "reason": "Snopes - established fact-checking website",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "factcheck.org": {
+      "score": 85,
+      "reason": "FactCheck.org - non-partisan fact-checking project",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "politifact.com": {
+      "score": 82,
+      "reason": "PolitiFact - Pulitzer Prize-winning fact-checking site",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "telegraph.co.uk": {
+      "score": 75,
+      "reason": "The Telegraph - established UK newspaper with center-right perspective",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "bloomberg.com": {
+      "score": 85,
+      "reason": "Bloomberg - financial news with strong data journalism",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "cnn.com": {
+      "score": 72,
+      "reason": "CNN - major news network, some partisan perception",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "foxnews.com": {
+      "score": 68,
+      "reason": "Fox News - major news network, partisan perception affects cross-party trust",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "msnbc.com": {
+      "score": 68,
+      "reason": "MSNBC - news network with partisan perception",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "nbcnews.com": {
+      "score": 78,
+      "reason": "NBC News - major broadcast network news division",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "cbsnews.com": {
+      "score": 78,
+      "reason": "CBS News - major broadcast network news division",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "abcnews.go.com": {
+      "score": 78,
+      "reason": "ABC News - major broadcast network news division",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "usatoday.com": {
+      "score": 75,
+      "reason": "USA Today - national newspaper with broad reach",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "time.com": {
+      "score": 78,
+      "reason": "TIME Magazine - established news magazine",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "newsweek.com": {
+      "score": 72,
+      "reason": "Newsweek - news magazine with mixed reputation",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "forbes.com": {
+      "score": 75,
+      "reason": "Forbes - business magazine, mix of staff and contributor content",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "businessinsider.com": {
+      "score": 70,
+      "reason": "Business Insider - business news site with quick reporting",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "dailymail.co.uk": {
+      "score": 55,
+      "reason": "Daily Mail - tabloid with sensationalist reputation",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "huffpost.com": {
+      "score": 65,
+      "reason": "HuffPost - news aggregator with partisan perception",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "breitbart.com": {
+      "score": 45,
+      "reason": "Breitbart - partisan site with limited cross-party trust",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "infowars.com": {
+      "score": 15,
+      "reason": "InfoWars - conspiracy theory site with very low credibility",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "youtube.com": {
+      "score": 40,
+      "reason": "YouTube - video platform, credibility varies by channel",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "twitter.com": {
+      "score": 35,
+      "reason": "Twitter/X - social media, not a primary source",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "x.com": {
+      "score": 35,
+      "reason": "X (Twitter) - social media, not a primary source",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "facebook.com": {
+      "score": 30,
+      "reason": "Facebook - social media platform, not a news source",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "reddit.com": {
+      "score": 35,
+      "reason": "Reddit - social platform, credibility varies by subreddit",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    },
+    "wikipedia.org": {
+      "score": 75,
+      "reason": "Wikipedia - crowd-sourced encyclopedia, good for general reference",
+      "lastEvaluated": "2025-07-17T00:00:00Z"
+    }
+  }
+}

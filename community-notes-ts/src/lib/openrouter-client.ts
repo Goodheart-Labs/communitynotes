@@ -111,12 +111,12 @@ Focus only on factual context that materially and significantly changes the inte
 
 If no important context is missing, respond with exactly: "NO MISSING CONTEXT"
 
-If important context is missing, list the 1-3 most critical missing pieces in order of importance. Be specific and concise. Avoid technicalities, these should be significant errors. With each claim, write all the urls or sources that relate to that claim, in the format:
+If important context is missing, list the the most critical missing pieces in order of importance. Be specific and concise. Avoid technicalities, these should be significant errors. With each claim, write all the urls or sources that relate to that claim, in the format. In rare cases, list multiple claims if there are several of equal importance:
 
-1. [Claim]
+[Claim]
 Sources:
-- Source
-- Source
+- Source URL
+- Source URL
 
 Post text:
 \`\`\`
@@ -137,7 +137,7 @@ ${searchResults}
   }
 
   async evaluateSourceTrustworthiness(sourcesText: string): Promise<string> {
-    const prompt = `Evaluate these sources and rank them by how likely they are to be trusted by a broad, politically diverse audience.
+    const prompt = `  how likely they are to be trusted by a broad, politically diverse audience.
 
 Consider:
 - Domain reputation and credibility
@@ -164,7 +164,7 @@ Format your response as a numbered list with each entry containing the URL, scor
   }
 
   async findContextInSource(sourceContent: string, sourceUrl: string, missingContext: string): Promise<string> {
-    const prompt = `Given this source content and a piece of missing context, find the specific quotes or sections that provide this context.
+    const prompt = `Given this source content and a piece of missing context, determine if the source contains information that addresses the missing context.
 
 Missing context needed:
 \`\`\`
@@ -178,15 +178,13 @@ Source content:
 ${sourceContent.substring(0, 30000)} // Limit to avoid token issues
 \`\`\`
 
-If this source contains information addressing the missing context, provide:
-1. The most relevant quote(s) or section(s) from the source
-2. A brief explanation of how it addresses the missing context
+Analyze the source carefully and respond with ONLY:
+- "YES" if the source contains relevant information that addresses the missing context
+- "NO" if the source does not contain relevant information about the missing context
 
-If this source does not adequately address the missing context, respond with: "SOURCE DOES NOT ADDRESS CONTEXT"
+Do not provide any other text, quotes, or explanations. Just respond with YES or NO.`;
 
-Keep quotes concise but complete enough to be meaningful.`;
-
-    return this.claudeAnalyze(prompt);
+    return this.claudeAnalyze(prompt, 0.0, true);  // Use Sonnet 4 for context verification
   }
 
 }

@@ -1,15 +1,12 @@
 import { Post, NoteResult, Media, Config } from '../types';
-import { OpenRouterClient } from '../lib/openrouter-client';
 import { EnhancedResearchService } from './enhanced-research';
 
 export class NoteWriterService {
-  private openRouter: OpenRouterClient;
   private enhancedResearch: EnhancedResearchService;
   private config: Config;
 
   constructor(config: Config) {
     this.config = config;
-    this.openRouter = new OpenRouterClient(config);
     this.enhancedResearch = new EnhancedResearchService(config);
   }
 
@@ -30,41 +27,24 @@ export class NoteWriterService {
   }
 
   private async summarizeImages(media: Media[]): Promise<string> {
-    const summaries: string[] = [];
-    
-    for (let i = 0; i < media.length; i++) {
-      const item = media[i];
-      
-      if (item.type === 'photo' && item.url) {
-        try {
-          const description = await this.describeImage(item.url);
-          summaries.push(`Image ${i + 1}: ${description}`);
-        } catch (error) {
-          console.error(`Error describing image ${i + 1}:`, error);
-          summaries.push(`Image ${i + 1}: [Error describing image]`);
-        }
-      } else if (item.type === 'video') {
-        summaries.push(`Video ${i + 1}: [Video analysis not supported yet]`);
-      }
+    if (media.length === 0) {
+      return '';
     }
     
-    return summaries.join('\n\n');
-  }
-
-  private async describeImage(imageUrl: string): Promise<string> {
-    // For now, we'll use Claude to describe the image
-    // In production, you might want to use a specialized vision model
-    const prompt = `Please describe what you see in this image concisely and factually. Focus on any text, claims, or important visual elements that might need fact-checking.
-
-Image URL: ${imageUrl}
-
-Provide a brief, factual description.`;
-
-    try {
-      return await this.openRouter.claudeAnalyze(prompt);
-    } catch (error) {
-      // If image analysis fails, return a placeholder
-      return '[Image present but could not be analyzed]';
+    const imageCount = media.filter(m => m.type === 'photo').length;
+    const videoCount = media.filter(m => m.type === 'video').length;
+    
+    let summary = '🚩 MEDIA PRESENT BUT NOT PROCESSED:\n';
+    
+    if (imageCount > 0) {
+      summary += `- ${imageCount} image(s) present and not analyzed\n`;
     }
+    
+    if (videoCount > 0) {
+      summary += `- ${videoCount} video(s) present and not analyzed\n`;
+    }
+    
+    return summary;
   }
+
 }

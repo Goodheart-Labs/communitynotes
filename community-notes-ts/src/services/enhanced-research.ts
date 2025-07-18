@@ -3,14 +3,17 @@ import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import { Post, NoteResult, ProposedMisleadingNote, MisleadingTag, Config } from '../types';
 import { OpenRouterClient } from '../lib/openrouter-client';
+import { SourceTrustCacheService } from './source-trust-cache';
 
 export class EnhancedResearchService {
   private openRouter: OpenRouterClient;
   private config: Config;
+  private trustCache: SourceTrustCacheService;
 
   constructor(config: Config) {
     this.config = config;
     this.openRouter = new OpenRouterClient(config);
+    this.trustCache = new SourceTrustCacheService();
   }
 
   async researchAndWriteNote(post: Post, imagesSummary: string = ''): Promise<NoteResult> {
@@ -35,28 +38,55 @@ export class EnhancedResearchService {
         };
       }
 
-      // Phase 3: Extract URLs and evaluate trustworthiness
-      const urls = this.extractUrls(searchResults);
-      if (urls.length === 0) {
+      // Phase 3: Extract URLs from the missing context claims (not the original search)
+      const claimUrls = this.extractUrlsFromClaims(missingContext);
+      if (claimUrls.length === 0) {
         return {
           post,
-          refusal: 'NOT ENOUGH EVIDENCE TO WRITE A GOOD COMMUNITY NOTE - No sources found',
+          refusal: 'NOT ENOUGH EVIDENCE TO WRITE A GOOD COMMUNITY NOTE - No sources found in claims',
           images_summary: imagesSummary
         };
       }
 
-      const sourcesText = urls.map(url => `- ${url}`).join('\n');
-      const trustEvaluation = await this.openRouter.evaluateSourceTrustworthiness(sourcesText);
+      // Check cache first
+      const cachedScores = this.trustCache.getCachedScores(claimUrls);
+      const uncachedUrls = this.trustCache.filterUncachedUrls(claimUrls);
       
-      // Extract most trusted URL
-      const mostTrustedUrl = this.extractMostTrustedUrl(trustEvaluation, urls);
+      // Evaluate only uncached URLs
+      let evaluatedSources: { url: string; score: number; reason: string }[] = [];
+      if (uncachedUrls.length > 0) {
+        const sourcesText = uncachedUrls.map(url => `- ${url}`).join('\n');
+        const trustEvaluation = await this.openRouter.evaluateSourceTrustworthiness(sourcesText);
+        
+        // Extract and cache the evaluated sources
+        const parsedEvaluations = this.parseAndCacheTrustEvaluation(trustEvaluation, uncachedUrls);
+        evaluatedSources = parsedEvaluations;
+      }
+      
+      // Combine cached and newly evaluated sources
+      const allSources = [...cachedScores, ...evaluatedSources];
+      
+      // Filter for trusted sources (score > 60) and sort by score
+      const trustedSources = allSources
+        .filter(source => source.score > 60)
+        .sort((a, b) => b.score - a.score);
+      
+      if (trustedSources.length === 0) {
+        return {
+          post,
+          refusal: 'NOT ENOUGH EVIDENCE TO WRITE A GOOD COMMUNITY NOTE - No sources scored above 60',
+          images_summary: imagesSummary
+        };
+      }
+
+      const mostTrustedUrl = trustedSources[0].url;
 
       // Phase 4: Fetch content from most trusted source
       let sourceContent = await this.fetchWebContent(mostTrustedUrl);
       
-      if (!sourceContent && urls.length > 1) {
-        // Try backup source
-        sourceContent = await this.fetchWebContent(urls[1]);
+      if (!sourceContent && trustedSources.length > 1) {
+        // Try backup trusted source
+        sourceContent = await this.fetchWebContent(trustedSources[1].url);
       }
 
       if (!sourceContent) {
@@ -74,27 +104,40 @@ export class EnhancedResearchService {
         missingContext
       );
 
-      if (contextVerification.includes('SOURCE DOES NOT ADDRESS CONTEXT')) {
-        // Try other sources
-        for (const url of urls.slice(1, 3)) {
-          const altContent = await this.fetchWebContent(url);
+      let foundValidSource = contextVerification.trim().toUpperCase() === 'YES';
+      let validSourceUrl = mostTrustedUrl;
+
+      if (!foundValidSource) {
+        // Try other trusted sources (only those scoring > 60)
+        for (const source of trustedSources.slice(1, 3)) {
+          const altContent = await this.fetchWebContent(source.url);
           if (altContent) {
             const altVerification = await this.openRouter.findContextInSource(
               altContent,
-              url,
+              source.url,
               missingContext
             );
-            if (!altVerification.includes('SOURCE DOES NOT ADDRESS CONTEXT')) {
-              sourceContent = altContent;
+            if (altVerification.trim().toUpperCase() === 'YES') {
+              foundValidSource = true;
+              validSourceUrl = source.url;
               break;
             }
           }
         }
       }
 
+      // If no source contains the relevant context, refuse to create a note
+      if (!foundValidSource) {
+        return {
+          post,
+          refusal: 'NOT ENOUGH EVIDENCE TO WRITE A GOOD COMMUNITY NOTE - Sources do not contain relevant context',
+          images_summary: imagesSummary
+        };
+      }
+
       // Create the note
       const primaryContext = this.extractPrimaryContext(missingContext);
-      const noteText = this.formatNote(primaryContext, mostTrustedUrl);
+      const noteText = this.formatNote(primaryContext, validSourceUrl);
 
       return {
         post,
@@ -116,25 +159,68 @@ export class EnhancedResearchService {
     }
   }
 
-  private extractUrls(text: string): string[] {
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+[^\s<>"{}|\\^`\[\].,;:!?\'")\]]/g;
-    const urls = text.match(urlRegex) || [];
+  private extractUrlsFromClaims(missingContext: string): string[] {
+    const urls: string[] = [];
+    const lines = missingContext.split('\n');
+    let inSourcesSection = false;
+    
+    for (const line of lines) {
+      if (line.trim().toLowerCase() === 'sources:') {
+        inSourcesSection = true;
+        continue;
+      }
+      
+      if (inSourcesSection && line.trim().startsWith('-')) {
+        const urlMatch = line.match(/https?:\/\/[^\s<>"{}|\\^`\[\]]+[^\s<>"{}|\\^`\[\].,;:!?\'")\]]/);
+        if (urlMatch) {
+          urls.push(urlMatch[0]);
+        }
+      } else if (inSourcesSection && line.trim() && !line.trim().startsWith('-')) {
+        // End of sources section
+        inSourcesSection = false;
+      }
+    }
+    
     return [...new Set(urls)]; // Remove duplicates
   }
 
-  private extractMostTrustedUrl(trustEvaluation: string, urls: string[]): string {
-    // Try to parse the most trusted URL from evaluation
+  private parseAndCacheTrustEvaluation(trustEvaluation: string, urls: string[]): { url: string; score: number; reason: string }[] {
+    const evaluatedSources: { url: string; score: number; reason: string }[] = [];
     const lines = trustEvaluation.split('\n');
-    for (const line of lines) {
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Look for lines containing URLs
       for (const url of urls) {
         if (line.includes(url)) {
-          return url;
+          // Extract score - look for patterns like "score: 85" or "Trust score: 85" or just "85"
+          const scoreMatch = line.match(/(?:score|Score):\s*(\d+)|(?:^|\s)(\d+)(?:\s|$)/);
+          if (scoreMatch) {
+            const score = parseInt(scoreMatch[1] || scoreMatch[2]);
+            
+            // Extract reason - usually on the same line or the next line
+            let reason = '';
+            const reasonMatch = line.match(/(?:reason|Reason):\s*(.+)/);
+            if (reasonMatch) {
+              reason = reasonMatch[1].trim();
+            } else if (i + 1 < lines.length) {
+              // Check next line for reason
+              reason = lines[i + 1].trim();
+            }
+            
+            // Cache the score
+            this.trustCache.setTrustScore(url, score, reason);
+            
+            evaluatedSources.push({ url, score, reason });
+          }
         }
       }
     }
-    // Fallback to first URL
-    return urls[0];
+    
+    return evaluatedSources;
   }
+
 
   private async fetchWebContent(url: string): Promise<string | null> {
     try {
@@ -185,13 +271,14 @@ export class EnhancedResearchService {
   }
 
   private formatNote(context: string, sourceUrl: string): string {
-    let note = `Missing context: ${context} ${sourceUrl}`;
+    // Just return the context and source URL without any prefix
+    let note = `${context} ${sourceUrl}`;
     
     // Ensure under 280 characters
     if (note.length > 280) {
       const excess = note.length - 280 + 3; // +3 for "..."
       const shortenedContext = context.substring(0, context.length - excess) + '...';
-      note = `Missing context: ${shortenedContext} ${sourceUrl}`;
+      note = `${shortenedContext} ${sourceUrl}`;
     }
     
     return note;
