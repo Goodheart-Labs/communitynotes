@@ -1,0 +1,14 @@
+{
+  "name": "community-notes",
+  "version": "1.0.0",
+  "description": "Community Notes Bot Runner",
+  "scripts": {
+    "notes": "cd community-notes-ts && bun run dev",
+    "notes:5": "cd community-notes-ts && bun run dev --max-posts 5 --dry-run",
+    "notes:10": "cd community-notes-ts && bun run dev --max-posts 10 --dry-run",
+    "notes:live": "cd community-notes-ts && bun run dev --max-posts 5",
+    "notes:live:10": "cd community-notes-ts && bun run dev --max-posts 10",
+    "notes:grok": "cd community-notes-ts && bun run dev --max-posts 5 --dry-run --research-mode grok",
+    "notes:help": "echo 'Available scripts: notes (default), notes:5, notes:10, notes:live, notes:live:10, notes:grok'"
+  }
+}

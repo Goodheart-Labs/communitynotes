@@ -297,16 +297,23 @@ export class EnhancedResearchService {
   }
 
   private formatNote(context: string, sourceUrl: string): string {
-    // Just return the context and source URL without any prefix
-    let note = `${context} ${sourceUrl}`;
+    // URLs count as 23 characters on Twitter (not 24 as commonly believed)
+    const URL_LENGTH = 23;
+    const MAX_LENGTH = 280;
     
-    // Ensure under 500 characters (new limit)
-    if (note.length > 500) {
-      const excess = note.length - 500 + 3; // +3 for "..."
-      const shortenedContext = context.substring(0, context.length - excess) + '...';
-      note = `${shortenedContext} ${sourceUrl}`;
+    // Calculate the actual length on Twitter
+    const contextLength = context.length;
+    const spaceLength = 1;
+    const twitterLength = contextLength + spaceLength + URL_LENGTH;
+    
+    let finalContext = context;
+    
+    // If too long, shorten the context
+    if (twitterLength > MAX_LENGTH) {
+      const availableForContext = MAX_LENGTH - URL_LENGTH - spaceLength - 3; // -3 for "..."
+      finalContext = context.substring(0, availableForContext) + '...';
     }
     
-    return note;
+    return `${finalContext} ${sourceUrl}`;
   }
 }

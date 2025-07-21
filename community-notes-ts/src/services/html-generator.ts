@@ -1,6 +1,21 @@
 import { Post, NoteResult } from '../types';
 import { LogCollector } from '../lib/log-collector';
 
+function calculateTwitterLength(text: string): number {
+  // URLs count as 23 characters on Twitter
+  const URL_LENGTH = 23;
+  const urlRegex = /https?:\/\/[^\s]+/g;
+  const urls = text.match(urlRegex) || [];
+  
+  // Replace each URL with 23 characters worth of placeholder
+  let twitterText = text;
+  urls.forEach(url => {
+    twitterText = twitterText.replace(url, 'x'.repeat(URL_LENGTH));
+  });
+  
+  return twitterText.length;
+}
+
 export function generateHTMLReport(
   post: Post,
   result: NoteResult,
@@ -305,7 +320,7 @@ export function generateHTMLReport(
         ${result.note.note_text}
       </div>
       <div class="metadata">
-        <span>Character count: ${result.note.note_text.length}/280</span>
+        <span>Character count: ${calculateTwitterLength(result.note.note_text)}/280</span>
         ${result.note.misleading_tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
       </div>
     ` : ''}

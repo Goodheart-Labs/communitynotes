@@ -250,7 +250,6 @@ export function generateBatchHTMLReport(results: BatchResult[]): string {
           <div class="result-header" onclick="toggleResult(${index})">
             <div class="result-status" style="color: ${statusColor};">${statusIcon}</div>
             <div class="result-summary">
-              <div class="post-text">${escapeHtml(post.text.substring(0, 150))}${post.text.length > 150 ? '...' : ''}</div>
               ${result.note ? `
                 <div class="note-generated">
                   <strong>Note:</strong> ${escapeHtml(result.note.note_text)}
